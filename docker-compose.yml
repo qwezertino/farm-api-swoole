@@ -1,0 +1,57 @@
+services:
+    app:
+        build:
+            context: .
+            dockerfile: ./.docker/php/Dockerfile
+        volumes:
+            - .:/var/www/html
+        ports:
+            - "${APP_PORT:-8000}:8000"
+        networks:
+            - app_network
+        depends_on:
+            - postgresql
+            - redis
+        restart: unless-stopped
+
+    postgresql:
+        image: postgres:15
+        container_name: postgres
+        volumes:
+            - ./database/postgres-data:/var/lib/postgresql/data
+        environment:
+            POSTGRES_USER: ${DB_USERNAME}
+            POSTGRES_PASSWORD: ${DB_PASSWORD}
+            POSTGRES_DB: ${DB_DATABASE}
+        ports:
+            - "${FORWARD_DB_PORT:-5432}:5432"
+        networks:
+            - app_network
+        healthcheck:
+            test:
+                - CMD
+                - pg_isready
+            retries: 3
+            timeout: 5s
+        restart: unless-stopped
+
+    redis:
+        image: redis:7
+        container_name: redis
+        volumes:
+            - ./database/redis-data:/data
+        ports:
+            - "${FORWARD_REDIS_PORT:-6379}:6379"
+        restart: unless-stopped
+        networks:
+            - app_network
+        healthcheck:
+            test:
+                - CMD
+                - redis-cli
+                - ping
+            retries: 3
+            timeout: 5s
+networks:
+    app_network:
+        driver: bridge

@@ -1,0 +1,3 @@
+*.sqlite*
+redis-data
+postgres-data
