@@ -12,7 +12,7 @@ Dependencies: `php`, `composer`, `docker`, `docker-compose`
     ```
 -   Enter the app folder and Copy .env.example to .env
     ```php
-    cd farm-api-swoole && cp .env.example .env`
+    cd farm-api-swoole && cp .env.example .env
     ```
 -   If you want you can change some values in .env like `APP_PORT`, `FORWARD_REDIS_PORT`, `FORWARD_DB_PORT` etc. By default it's `61, 16379, 33043`
 

@@ -3,7 +3,7 @@ services:
         build:
             context: .
             dockerfile: ./.docker/php/Dockerfile
-        container_name: app
+        container_name: farm-app
         volumes:
             - .:/var/www/html
         ports:
@@ -17,7 +17,7 @@ services:
 
     postgresql:
         image: postgres:15
-        container_name: postgresql
+        container_name: farm-postgresql
         volumes:
             - ./database/postgres-data:/var/lib/postgresql/data
         environment:
@@ -36,7 +36,7 @@ services:
 
     redis:
         image: redis:7
-        container_name: redis
+        container_name: farm-redis
         volumes:
             - ./database/redis-data:/data
         ports:
