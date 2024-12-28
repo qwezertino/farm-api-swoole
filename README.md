@@ -32,6 +32,10 @@ Dependencies: `php`, `composer`, `docker`, `docker-compose`
     ```php
     docker-compose exec app php artisan migrate --force && docker-compose exec app php artisan db:seed --class=ProductsTableSeeder
     ```
+-   Clear the Redis cache, it sometimes return empty products on start after building project
+    ```php
+    docker-compose exec app php artisan cache:clear
+    ```
 
 ## USEFULL COMMANDS
 
