@@ -3,31 +3,41 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
     /**
-     * Display a listing of the resource. TEst
+     * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        $query = Product::query();
-        if ($request->has('name')) {
-            $query->filterByName($request->name);
-        }
+        $cacheKey = 'products:' . md5($request->fullUrl());
 
-        if ($request->has('min_price') && $request->has('max_price')) {
-            $query->filterByPrice($request->min_price, $request->max_price);
-        }
+        $products = Cache::remember($cacheKey, 600, function () use ($request) {
+            Log::info("Fetching products from database");
 
-        if ($request->has('min_amount') && $request->has('max_amount')) {
-            $query->filterByAmount($request->min_amount, $request->max_amount);
-        }
+            $query = Product::query();
 
-        $products = $query->get();
+            if ($request->has('name')) {
+                $query->filterByName($request->name);
+            }
+
+            if ($request->has('min_price') && $request->has('max_price')) {
+                $query->filterByPrice($request->min_price, $request->max_price);
+            }
+
+            if ($request->has('min_amount') && $request->has('max_amount')) {
+                $query->filterByAmount($request->min_amount, $request->max_amount);
+            }
+
+            return $query->get();
+        });
+
+        // If products are found in the cache, it's a cache hit. Log this after getting the products.
+        Log::info("Cache hit for key: " . $cacheKey);
 
         return response()->json($products);
     }
@@ -37,6 +47,7 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        // Validate the input
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
@@ -45,16 +56,22 @@ class ProductController extends Controller
 
         $product = Product::create($validated);
 
+        Cache::forget('products:' . md5($request->fullUrl()));
+
         return response()->json($product, 201);
     }
-
 
     /**
      * Display the specified resource.
      */
     public function show(string $id)
     {
-        $product = Product::findOrFail($id);
+        // Check if the product is cached first
+        $cacheKey = 'product:' . $id;
+        $product = Cache::remember($cacheKey, 3600, function () use ($id) {
+            return Product::findOrFail($id);
+        });
+
         return response()->json($product, 200);
     }
 
@@ -63,8 +80,10 @@ class ProductController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        // Find the product
         $product = Product::findOrFail($id);
 
+        // Validate the input
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'price' => 'sometimes|numeric|min:0',
@@ -72,6 +91,9 @@ class ProductController extends Controller
         ]);
 
         $product->update($validated);
+
+        Cache::forget('product:' . $id);
+        Cache::forget('products:' . md5($request->fullUrl()));
 
         return response()->json($product, 200);
     }
@@ -82,7 +104,13 @@ class ProductController extends Controller
     public function destroy(string $id)
     {
         $product = Product::findOrFail($id);
+
         $product->delete();
+
+        Cache::forget('product:' . $id);
+        Cache::forget('products:' . md5(request()->fullUrl()));
+
         return response()->json(['message' => 'Product deleted'], 200);
     }
 }
+
